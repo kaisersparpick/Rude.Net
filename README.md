@@ -26,7 +26,7 @@ Rude automatically generates a key for each rule based on the condition function
 
 Checking conditions based on the applied rules is triggered by calling `CheckConditions()`.
 
-```js
+```cs
 rude.CheckConditions(MethodName);
 ```
 
