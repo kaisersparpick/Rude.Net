@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 
 namespace RudeExample
 {
@@ -8,12 +10,12 @@ namespace RudeExample
 
         public Dictionary<string, Rule> Rules;
 
-        private Dictionary<string, bool?> _path;
+        private List<KeyValuePair<string, bool?>> _path;
 
         public Rude()
         {
             Rules = new Dictionary<string, Rule>();
-            _path = new Dictionary<string, bool?>();
+            _path = new List<KeyValuePair<string, bool?>>();
         }
 
         public void AddRule(Callback condition, Callback yes, Callback no)
@@ -24,15 +26,34 @@ namespace RudeExample
             Rules.Add(n, r);
         }
 
+        public void AddRules(object target, string json)
+        {
+            Console.WriteLine("-------------------------------------------");
+            Console.WriteLine("JSON:");
+            Console.WriteLine(json);
+
+            var jsonRules = JsonConvert.DeserializeObject<List<JsonRule>>(json);
+
+            foreach(var jRule in jsonRules)
+            {
+                AddRule(
+                    jRule.ToCallback(target, jRule.Condition),
+                    jRule.ToCallback(target, jRule.Yes), 
+                    jRule.ToCallback(target, jRule.No));
+            }
+        }
+
         public void CheckConditions(Callback condition)
         {
             var loop = true;
             while (loop)
             {
+                if (condition == null) break;
+
                 var rule = Rules[condition.Method.Name];
                 var result = rule.Condition();
 
-                _path.Add(condition.Method.Name, result);
+                _path.Add(new KeyValuePair<string, bool?> (condition.Method.Name, result));
 
                 switch (result)
                 {
@@ -66,6 +87,25 @@ namespace RudeExample
             public Callback Condition;
             public Callback Yes;
             public Callback No;
+        }
+
+        public class JsonRule
+        {
+            public string Condition;
+            public string Yes;
+            public string No;
+
+            public JsonRule(string condition, string yes, string no)
+            {
+                Condition = condition;
+                Yes = yes;
+                No = no;
+            }
+
+            public Callback ToCallback(object target, string field)
+            {
+                return field == null ? null : (Callback)Delegate.CreateDelegate(typeof(Callback), target, field);
+            }
         }
     }
 }
